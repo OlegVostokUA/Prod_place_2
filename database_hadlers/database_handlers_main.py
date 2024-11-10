@@ -31,7 +31,11 @@ def get_db_connection(path_to_db_file=None):
                                                                     type_operation TEXT,
                                                                     manufacturer TEXT,
                                                                     production_date DATE,
-                                                                    expiration_date DATE)"""
+                                                                    expiration_date DATE,
+                                                                    number_document TEXT,
+                                                                    date_document DATE,
+                                                                    number_directive TEXT,
+                                                                    date_directive DATE)"""
 
     cursor.execute(cr_table_product_query)
 
