@@ -7,7 +7,7 @@ from datetime import datetime
 from PyQt5.QtGui import QFont # QIcon, QPixmap,
 from PyQt5.QtWidgets import *
 from PyQt5 import QtCore, QtGui
-from database_hadlers.database_handlers_main import get_db_connection
+from database_hadlers.database_handlers_main import get_db_connection, insert_product_data, insert_or_update_products
 
 
 get_db_connection(path_to_db_file='database/prod_database.db')
@@ -105,14 +105,12 @@ class LossProfitTab(QWidget):
         input_source_num_layout = QVBoxLayout(self)
         input_source_num_layout.addWidget(self.label_source_number)
         input_source_num_layout.addWidget(self.input_source_number)
-        # input_source_dest_layout.addSpacing(40)
         input_dest_name_layout = QVBoxLayout(self)
         input_dest_name_layout.addWidget(self.label_destination_name)
         input_dest_name_layout.addWidget(self.input_destination_name)
         input_dest_num_layout = QVBoxLayout(self)
         input_dest_num_layout.addWidget(self.label_destination_number)
         input_dest_num_layout.addWidget(self.input_destination_number)
-
         input_source_dest_layout.addLayout(input_source_name_layout)
         input_source_dest_layout.addLayout(input_source_num_layout)
         input_source_dest_layout.addLayout(input_dest_name_layout)
@@ -190,7 +188,30 @@ class LossProfitTab(QWidget):
         main_layout.addLayout(button_layout)
 
     def push_to_database(self):
-        print('PUSH TO DATABASE')
+        data_tuple = (self.input_source_name.text(),
+                      self.input_source_number.text(),
+                      self.input_destination_name.text(),
+                      self.input_destination_number.text(),
+                      self.input_date.text(),
+                      self.input_product_name.text(),
+                      self.input_unit.currentText(),
+                      self.input_product_quantity.text(),
+                      self.input_product_price.text(),
+                      self.input_product_total.text(),
+                      self.input_type_oper.currentText(),
+                      self.input_manufacturer.text(),
+                      self.input_production_date.text(),
+                      self.input_expiration_date.text(),
+                      self.input_number_document.text(),
+                      self.input_date_document.text(),
+                      self.input_number_directive.text(),
+                      self.input_date_directive.text())
+        #print(data_tuple)
+        #insert_product_data(data_tuple)
+        data_tuple_2 = (self.input_product_name.text(),
+                      self.input_unit.currentText(),
+                      self.input_product_quantity.text())
+        insert_or_update_products(data_tuple_2)
 
 
 class MainWindow(QMainWindow):
