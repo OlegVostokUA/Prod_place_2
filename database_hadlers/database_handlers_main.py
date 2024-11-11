@@ -53,30 +53,40 @@ def insert_product_data(data):
                                             date_operation, name_product, unit, quantity,
                                             price, total, type_operation, manufacturer,
                                             production_date, expiration_date, number_document,
-                                            date_document, number_directive, date_directive) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                   data)
+                                            date_document, number_directive, date_directive) 
+                                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", data)
     sql_conn.commit()
 
 
 def insert_or_update_products(data_insert):
+    data_insert = list(data_insert)
     name_product = data_insert[0].split(' ')
+    if len(name_product) >= 4:
+        name_product = (f'{name_product[0]} {name_product[1]} {name_product[2]} {name_product[3]}%',)
+    elif len(name_product) >= 3:
+        name_product = (f'{name_product[0]} {name_product[1]} {name_product[2]}%',)
+    elif len(name_product) >= 2:
+        name_product = (f'{name_product[0]} {name_product[1]}%',)
+    else:
+        name_product = (f'{name_product[0]}%',)
+
+    data_select = cursor.execute("""SELECT * FROM all_products WHERE name_product LIKE ?""", name_product).fetchone()
+
     try:
-        name_product = (name_product[0] + ' ' + name_product[1],)
-    except:
-        name_product = (name_product[0],)
-    print(name_product)
-    data_select = cursor.execute("""SELECT * FROM all_products WHERE name_product LIKE ?""", name_product).fetchall()
-    # print(data_select)
-    try:
-        data_select = data_select[0]
+        data_select = data_select
     except:
         data_select = None
 
     if data_select:
-        print('yes')
+        if data_insert[3] == 'Убуток':
+            data_insert[2] = -abs(float(data_insert[2]))
+        print(data_insert[2])
+        sum_quantity = float(data_insert[2]) + data_select[3]
+        update_data = (sum_quantity, name_product[0])
+        cursor.execute("""UPDATE all_products SET quantity = ? WHERE name_product LIKE ?""", update_data)
     else:
-        print('no')
-
+        cursor.execute("""INSERT INTO all_products (name_product, unit, quantity) VALUES (?,?,?)""", data_insert[:3])
+    sql_conn.commit()
 
 
 

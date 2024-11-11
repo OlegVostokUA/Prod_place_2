@@ -207,10 +207,11 @@ class LossProfitTab(QWidget):
                       self.input_number_directive.text(),
                       self.input_date_directive.text())
         #print(data_tuple)
-        #insert_product_data(data_tuple)
+        insert_product_data(data_tuple)
         data_tuple_2 = (self.input_product_name.text(),
-                      self.input_unit.currentText(),
-                      self.input_product_quantity.text())
+                        self.input_unit.currentText(),
+                        self.input_product_quantity.text(),
+                        self.input_type_oper.currentText())
         insert_or_update_products(data_tuple_2)
 
 
