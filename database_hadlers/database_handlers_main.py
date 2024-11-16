@@ -5,6 +5,7 @@ sql_conn = None
 cursor = None
 
 
+# create functions part
 def get_db_connection(path_to_db_file=None):
     """
     func for connection to database and create tables
@@ -48,6 +49,8 @@ def get_db_connection(path_to_db_file=None):
 
 #get_db_connection()
 
+
+# insert functions part
 def insert_product_data(data):
     cursor.execute("""INSERT INTO product ( source_name, source_number, dest_name, dest_number,
                                             date_operation, name_product, unit, quantity,
@@ -89,10 +92,13 @@ def insert_or_update_products(data_insert):
     sql_conn.commit()
 
 
-
-
-def select_():
-    data = cursor.execute("""SELECT * FROM product""").fetchall()
-    print(data)
+# select functions part
+def parse_db_all_products():
+    '''
+    parsing main file
+    '''
+    cursor.execute("""SELECT * FROM all_products ORDER BY name_product""")
+    records = cursor.fetchall()
+    return records
 
 # select_()

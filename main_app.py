@@ -3,11 +3,14 @@
 
 import sys
 from datetime import datetime
+import pandas as pd
 
 from PyQt5.QtGui import QFont # QIcon, QPixmap,
 from PyQt5.QtWidgets import *
 from PyQt5 import QtCore, QtGui
-from database_hadlers.database_handlers_main import get_db_connection, insert_product_data, insert_or_update_products
+from database_hadlers.database_handlers_main import get_db_connection, insert_product_data, insert_or_update_products, parse_db_all_products
+
+HEADER_LABELS = ['Найменування', 'од. виміру', 'кількість']
 
 
 get_db_connection(path_to_db_file='database/prod_database.db')
@@ -206,13 +209,73 @@ class LossProfitTab(QWidget):
                       self.input_date_document.text(),
                       self.input_number_directive.text(),
                       self.input_date_directive.text())
-        #print(data_tuple)
         insert_product_data(data_tuple)
         data_tuple_2 = (self.input_product_name.text(),
                         self.input_unit.currentText(),
                         self.input_product_quantity.text(),
                         self.input_type_oper.currentText())
         insert_or_update_products(data_tuple_2)
+
+
+class Storage(QWidget):
+    def __init__(self, parent=None):
+        super(Storage, self).__init__()
+        self.parent = parent
+        # create table widget
+        self.table_widget = QTableWidget(0, 3) # rows, columns
+        self.table_widget.setHorizontalHeaderLabels(HEADER_LABELS) # headers of columns on table
+        self.table_widget.horizontalHeader().setDefaultSectionSize(200)
+        self.table_widget.setColumnWidth(0, 350)
+        # create button
+        self.push_button = QPushButton('   Сформувати таблицю')
+        self.push_button.setIcon(QtGui.QIcon('icons/computer.png'))
+        self.push_button.clicked.connect(self.show_table_func)
+        self.form_excel = QPushButton('   Формувати у Excel')
+        self.form_excel.setIcon(QtGui.QIcon('icons/excel.png'))
+        self.form_excel.clicked.connect(self.export_to_excel)
+        # create dialog-window for save file
+        self.dialog = QFileDialog(self)
+        # layout box
+        main_layout = QVBoxLayout(self)
+        main_layout.addWidget(self.table_widget)
+        main_layout.addWidget(self.push_button)
+        main_layout.addWidget(self.form_excel)
+
+    def show_table_func(self):
+        '''
+        function for create and show data from 'main_file' table
+        '''
+        self.all_producrs = parse_db_all_products()
+        self.table_widget.setRowCount(len(self.all_producrs[0]))
+        row_table = 0
+        for row in self.all_producrs:
+            column_table = 0
+            for column in row[1:]:
+                self.table_widget.setItem(row_table, column_table, QTableWidgetItem(str(column)))
+                column_table += 1
+            row_table += 1
+
+    def export_to_excel(self):
+        column_headers = []
+        row_count = self.table_widget.model().columnCount()
+        for j in range(self.table_widget.model().columnCount()):
+            column_headers.append(self.table_widget.horizontalHeaderItem(j).text())
+            df = pd.DataFrame(columns=column_headers)
+        for row in range(row_count):
+            for col in range(self.table_widget.columnCount()):
+                try:
+                    temp = self.table_widget.item(row, col).text()
+                except:
+                    temp = 0
+                df.at[row, column_headers[col]] = temp
+
+        # activate dialog-window for save file
+        result = self.dialog.getSaveFileName(self.table_widget, 'Зберегти файл', 'C:/', 'Excel files (*.xlsx)')
+        # try-except block for saving file
+        try:
+            df.to_excel(result[0])
+        except:
+            pass
 
 
 class MainWindow(QMainWindow):
@@ -231,6 +294,7 @@ class MainWindow(QMainWindow):
         self.main_widget = QTabWidget()
         self.setCentralWidget(self.main_widget)
         self.main_widget.addTab(LossProfitTab(), "Прихід / Розхід")
+        self.main_widget.addTab(Storage(), "Залишки (Склад)")
 
 
 
