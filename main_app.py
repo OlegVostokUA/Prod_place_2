@@ -4,6 +4,7 @@
 import sys
 from datetime import datetime
 import pandas as pd
+import locale
 
 from PyQt5.QtGui import QFont # QIcon, QPixmap,
 from PyQt5.QtWidgets import *
@@ -14,6 +15,8 @@ HEADER_LABELS = ['Найменування', 'од. виміру', 'кількі
 
 
 get_db_connection(path_to_db_file='database/prod_database.db')
+locale.setlocale(locale.LC_ALL, "ru_RU")
+date = datetime.today().strftime("%d.%m.%Y")
 
 
 class LossProfitTab(QWidget):
@@ -257,7 +260,7 @@ class Storage(QWidget):
 
     def export_to_excel(self):
         column_headers = []
-        row_count = self.table_widget.model().columnCount()
+        row_count = self.table_widget.model().rowCount()
         for j in range(self.table_widget.model().columnCount()):
             column_headers.append(self.table_widget.horizontalHeaderItem(j).text())
             df = pd.DataFrame(columns=column_headers)
@@ -267,6 +270,11 @@ class Storage(QWidget):
                     temp = self.table_widget.item(row, col).text()
                 except:
                     temp = 0
+                try:
+                    temp = float(temp)
+                    temp = locale.str(temp)
+                except:
+                    pass
                 df.at[row, column_headers[col]] = temp
 
         # activate dialog-window for save file
