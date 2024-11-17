@@ -370,7 +370,15 @@ class Menu(QWidget):
                     item = self.table_widget.item(row, column).text()
                 else:
                     item = 0
-                print(item)
+                tuple_for_all_prod.append(item)
+            tuple_for_all_prod = tuple(tuple_for_all_prod)
+            if tuple_for_all_prod[3] != 0:
+                data_for_all_prod.append(tuple_for_all_prod)
+            tuple_for_all_prod = date_op + date_menu + tuple_for_all_prod
+            data_for_menu_prod.append(tuple_for_all_prod)
+        print(data_for_all_prod) # connect with func 'update_products_dec(data_for_all_prod)'
+        print(data_for_menu_prod) # create new table in db for menu data
+
 
 
     def export_to_excel(self):

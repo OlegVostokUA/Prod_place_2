@@ -92,7 +92,7 @@ def insert_or_update_products(data_insert):
 
 
 def update_products_dec(data):
-    data[2] = -abs(float(data[2]))
+    data[3] = -abs(float(data[3]))
     name_product = data[0]
     data_select = cursor.execute("""SELECT * FROM all_products WHERE name_product LIKE ?""", name_product).fetchone()
     sum_quantity = float(data[2]) + data_select[3]
