@@ -83,7 +83,6 @@ def insert_or_update_products(data_insert):
     if data_select:
         if data_insert[3] == 'Убуток':
             data_insert[2] = -abs(float(data_insert[2]))
-        print(data_insert[2])
         sum_quantity = float(data_insert[2]) + data_select[3]
         update_data = (sum_quantity, name_product[0])
         cursor.execute("""UPDATE all_products SET quantity = ? WHERE name_product LIKE ?""", update_data)
@@ -91,6 +90,15 @@ def insert_or_update_products(data_insert):
         cursor.execute("""INSERT INTO all_products (name_product, unit, quantity) VALUES (?,?,?)""", data_insert[:3])
     sql_conn.commit()
 
+
+def update_products_dec(data):
+    data[2] = -abs(float(data[2]))
+    name_product = data[0]
+    data_select = cursor.execute("""SELECT * FROM all_products WHERE name_product LIKE ?""", name_product).fetchone()
+    sum_quantity = float(data[2]) + data_select[3]
+    update_data = (sum_quantity, name_product[0])
+    print(update_data)
+    # cursor.execute("""UPDATE all_products SET quantity = ? WHERE name_product LIKE ?""", update_data)
 
 # select functions part
 def parse_db_all_products():

@@ -11,12 +11,12 @@ from PyQt5.QtWidgets import *
 from PyQt5 import QtCore, QtGui
 from database_hadlers.database_handlers_main import get_db_connection, insert_product_data, insert_or_update_products, parse_db_all_products
 
-HEADER_LABELS = ['Найменування', 'од. виміру', 'кількість']
-
-
 get_db_connection(path_to_db_file='database/prod_database.db')
 locale.setlocale(locale.LC_ALL, "ru_RU")
 date = datetime.today().strftime("%d.%m.%Y")
+
+HEADER_LABELS = ['Найменування', 'од. виміру', 'кількість']
+HEADER_LABELS_FOR_MENU = ['Найменування', 'од.виміру', f'наявність на {date}', 'вимагається']
 
 
 class LossProfitTab(QWidget):
@@ -258,6 +258,121 @@ class Storage(QWidget):
                 column_table += 1
             row_table += 1
 
+    def push_to_database(self):
+        pass
+
+    def export_to_excel(self):
+        column_headers = []
+        row_count = self.table_widget.model().rowCount()
+        for j in range(self.table_widget.model().columnCount()):
+            column_headers.append(self.table_widget.horizontalHeaderItem(j).text())
+            df = pd.DataFrame(columns=column_headers)
+        for row in range(row_count):
+            for col in range(self.table_widget.columnCount()):
+                try:
+                    temp = self.table_widget.item(row, col).text()
+                except:
+                    temp = 0
+                try:
+                    temp = float(temp)
+                    temp = locale.str(temp)
+                except:
+                    pass
+                df.at[row, column_headers[col]] = temp
+
+        # activate dialog-window for save file
+        result = self.dialog.getSaveFileName(self.table_widget, 'Зберегти файл', 'C:/', 'Excel files (*.xlsx)')
+        # try-except block for saving file
+        try:
+            df.to_excel(result[0])
+        except:
+            pass
+
+
+class Menu(QWidget):
+    def __init__(self, parent=None):
+        super(Menu, self).__init__()
+        self.parent = parent
+        # create date widget's
+        self.label_op_date = QLabel(self)
+        self.label_op_date.setText('Введіть дату операції:')
+        self.input_op_date = QDateEdit(self)
+        self.input_op_date.setCalendarPopup(True)
+        self.input_op_date.setDate(datetime.today())
+
+        self.label_menu_date = QLabel(self)
+        self.label_menu_date.setText('Введіть дату на яку здійснюється операція:')
+        self.input_menu_date = QDateEdit(self)
+        self.input_menu_date.setCalendarPopup(True)
+        self.input_menu_date.setDate(datetime.today())
+        # create table widget
+        self.table_widget = QTableWidget(0, 4) # rows, columns
+        self.table_widget.setHorizontalHeaderLabels(HEADER_LABELS_FOR_MENU) # headers of columns on table
+        self.table_widget.horizontalHeader().setDefaultSectionSize(200)
+        self.table_widget.setColumnWidth(0, 350)
+        # create button
+        self.push_button = QPushButton('   Сформувати таблицю')
+        self.push_button.setIcon(QtGui.QIcon('icons/computer.png'))
+        self.push_button.clicked.connect(self.show_table_func)
+        self.save_to_db = QPushButton('   Зберегти у Базу Даних')
+        self.save_to_db.setIcon(QtGui.QIcon('icons/database.png'))
+        self.save_to_db.clicked.connect(self.push_to_database)
+        self.form_excel = QPushButton('   Формувати у Excel')
+        self.form_excel.setIcon(QtGui.QIcon('icons/excel.png'))
+        self.form_excel.clicked.connect(self.export_to_excel)
+        # create dialog-window for save file
+        self.dialog = QFileDialog(self)
+        # layout box
+        main_layout = QVBoxLayout(self)
+        # 1 row
+        input_form_layout = QHBoxLayout(self)
+        input_form_layout.addWidget(self.label_op_date)
+        input_form_layout.addWidget(self.input_op_date)
+        input_form_layout.addSpacing(200)
+        input_form_layout.addWidget(self.label_menu_date)
+        input_form_layout.addWidget(self.input_menu_date)
+        # 2 row
+        table_layout = QHBoxLayout(self)
+        table_layout.addWidget(self.table_widget)
+        # 3 row
+        button_layout = QVBoxLayout(self)
+        button_layout.addWidget(self.push_button)
+        button_layout.addWidget(self.save_to_db)
+        button_layout.addWidget(self.form_excel)
+        # main_layout
+        main_layout.addLayout(input_form_layout)
+        main_layout.addWidget(self.table_widget)
+        main_layout.addLayout(button_layout)
+
+    def show_table_func(self):
+        '''
+        function for create and show data from 'main_file' table
+        '''
+        self.all_producrs = parse_db_all_products()
+        self.table_widget.setRowCount(len(self.all_producrs[0]))
+        row_table = 0
+        for row in self.all_producrs:
+            column_table = 0
+            for column in row[1:]:
+                self.table_widget.setItem(row_table, column_table, QTableWidgetItem(str(column)))
+                column_table += 1
+            row_table += 1
+
+    def push_to_database(self):
+        date_op = (self.input_op_date.text(),)
+        date_menu = (self.input_menu_date.text(),)
+        data_for_all_prod = []
+        data_for_menu_prod = []
+        for row in range(self.table_widget.model().rowCount()):
+            tuple_for_all_prod = []
+            for column in range(self.table_widget.model().columnCount()):
+                if self.table_widget.item(row, column) is not None:
+                    item = self.table_widget.item(row, column).text()
+                else:
+                    item = 0
+                print(item)
+
+
     def export_to_excel(self):
         column_headers = []
         row_count = self.table_widget.model().rowCount()
@@ -295,14 +410,16 @@ class MainWindow(QMainWindow):
         # in here we set widgets and set properties
         self.setWindowTitle('eBook')
         self.setWindowIcon(QtGui.QIcon('icons/main.png'))
-        #self.setWindowTitle("My App") # title of app
+        # self.setWindowTitle("My App") # title of app
         self.resize(1150, 1000) # set size window
         font = QFont("Times New Roman", 14, 75, True) # set font window
         # add widgets
         self.main_widget = QTabWidget()
         self.setCentralWidget(self.main_widget)
-        self.main_widget.addTab(LossProfitTab(), "Прихід / Розхід")
         self.main_widget.addTab(Storage(), "Залишки (Склад)")
+        self.main_widget.addTab(LossProfitTab(), "Прихід / Розхід")
+        self.main_widget.addTab(Menu(), "Розхід на меню-вимогу")
+
 
 
 
