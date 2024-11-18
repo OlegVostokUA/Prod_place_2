@@ -41,9 +41,17 @@ def get_db_connection(path_to_db_file=None):
                                                                     name_product TEXT,
                                                                     unit TEXT,
                                                                     quantity REAL)"""
+    cr_table_products_for_menu = """CREATE TABLE IF NOT EXISTS prod_menu(id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                                                    date_operation DATE,
+                                                                    date_menu DATE,
+                                                                    name_product TEXT,
+                                                                    unit TEXT,
+                                                                    quantity_storage REAL,
+                                                                    quantity_for_menu REAL)"""
 
     cursor.execute(cr_table_product_query)
     cursor.execute(cr_table_products_query)
+    cursor.execute(cr_table_products_for_menu)
 
     sql_conn.commit()
 
@@ -93,12 +101,19 @@ def insert_or_update_products(data_insert):
 
 def update_products_dec(data):
     data[3] = -abs(float(data[3]))
-    name_product = data[0]
+    name_product = (data[0],)
     data_select = cursor.execute("""SELECT * FROM all_products WHERE name_product LIKE ?""", name_product).fetchone()
-    sum_quantity = float(data[2]) + data_select[3]
+    sum_quantity = round(float(data[3]) + data_select[3], 3)
     update_data = (sum_quantity, name_product[0])
-    print(update_data)
-    # cursor.execute("""UPDATE all_products SET quantity = ? WHERE name_product LIKE ?""", update_data)
+    # print(update_data)
+    cursor.execute("""UPDATE all_products SET quantity = ? WHERE name_product LIKE ?""", update_data)
+    sql_conn.commit()
+
+
+def insert_prod_menu(data):
+    cursor.executemany("""INSERT INTO prod_menu(date_operation, date_menu, name_product, unit, quantity_storage, quantity_for_menu) VALUES (?,?,?,?,?,?)""", data)
+    sql_conn.commit()
+
 
 # select functions part
 def parse_db_all_products():

@@ -9,7 +9,9 @@ import locale
 from PyQt5.QtGui import QFont # QIcon, QPixmap,
 from PyQt5.QtWidgets import *
 from PyQt5 import QtCore, QtGui
-from database_hadlers.database_handlers_main import get_db_connection, insert_product_data, insert_or_update_products, parse_db_all_products
+from database_hadlers.database_handlers_main import get_db_connection, \
+    insert_product_data, insert_or_update_products, parse_db_all_products, update_products_dec, \
+    insert_prod_menu
 
 get_db_connection(path_to_db_file='database/prod_database.db')
 locale.setlocale(locale.LC_ALL, "ru_RU")
@@ -370,16 +372,17 @@ class Menu(QWidget):
                     item = self.table_widget.item(row, column).text()
                 else:
                     item = 0
+                if item == '':
+                    item = 0
                 tuple_for_all_prod.append(item)
             tuple_for_all_prod = tuple(tuple_for_all_prod)
             if tuple_for_all_prod[3] != 0:
                 data_for_all_prod.append(tuple_for_all_prod)
             tuple_for_all_prod = date_op + date_menu + tuple_for_all_prod
             data_for_menu_prod.append(tuple_for_all_prod)
-        print(data_for_all_prod) # connect with func 'update_products_dec(data_for_all_prod)'
-        print(data_for_menu_prod) # create new table in db for menu data
-
-
+        for i in data_for_all_prod:
+            update_products_dec(list(i))
+        insert_prod_menu(data_for_menu_prod) # create new table in db for menu data
 
     def export_to_excel(self):
         column_headers = []
