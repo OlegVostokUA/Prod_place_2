@@ -47,7 +47,8 @@ def get_db_connection(path_to_db_file=None):
                                                                     name_product TEXT,
                                                                     unit TEXT,
                                                                     quantity_storage REAL,
-                                                                    quantity_for_menu REAL)"""
+                                                                    quantity_for_menu REAL,
+                                                                    date_time_op TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)"""
 
     cursor.execute(cr_table_product_query)
     cursor.execute(cr_table_products_query)
@@ -123,5 +124,15 @@ def parse_db_all_products():
     cursor.execute("""SELECT * FROM all_products ORDER BY name_product""")
     records = cursor.fetchall()
     return records
+
+
+def select_menu_data(dates):
+    # dates - tuple with two dates, Example: ('24.11.2024', '25.11.2024')
+    # dates get from two fields GUI
+    cursor.execute("""SELECT * FROM prod_menu WHERE date_menu BETWEEN ? AND ?""", dates)
+    data_menu_select = cursor.fetchall()
+    return data_menu_select
+
+
 
 # select_()

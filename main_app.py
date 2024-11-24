@@ -1,6 +1,6 @@
 # pip install pyinstaller
 # pyinstaller -F -w -i "C:\Users\User\PycharmProjects\ProdPlace\MainApp\main.ico" MainApp.py
-
+import copy
 import sys
 from datetime import datetime
 import pandas as pd
@@ -11,11 +11,12 @@ from PyQt5.QtWidgets import *
 from PyQt5 import QtCore, QtGui
 from database_hadlers.database_handlers_main import get_db_connection, \
     insert_product_data, insert_or_update_products, parse_db_all_products, update_products_dec, \
-    insert_prod_menu
+    insert_prod_menu, select_menu_data
 
 get_db_connection(path_to_db_file='database/prod_database.db')
 locale.setlocale(locale.LC_ALL, "ru_RU")
 date = datetime.today().strftime("%d.%m.%Y")
+first_month_date = datetime.now().replace(day=1).strftime('%d.%m.%Y')
 
 HEADER_LABELS = ['Найменування', 'од. виміру', 'кількість']
 HEADER_LABELS_FOR_MENU = ['Найменування', 'од.виміру', f'наявність на {date}', 'вимагається']
@@ -251,7 +252,7 @@ class Storage(QWidget):
         function for create and show data from 'main_file' table
         '''
         self.all_producrs = parse_db_all_products()
-        self.table_widget.setRowCount(len(self.all_producrs[0]))
+        self.table_widget.setRowCount(len(self.all_producrs))
         row_table = 0
         for row in self.all_producrs:
             column_table = 0
@@ -351,7 +352,7 @@ class Menu(QWidget):
         function for create and show data from 'main_file' table
         '''
         self.all_producrs = parse_db_all_products()
-        self.table_widget.setRowCount(len(self.all_producrs[0]))
+        self.table_widget.setRowCount(len(self.all_producrs))
         row_table = 0
         for row in self.all_producrs:
             column_table = 0
@@ -412,6 +413,147 @@ class Menu(QWidget):
             pass
 
 
+class MenuReport(QWidget):
+    def __init__(self, parent=None):
+        self.parent = parent
+        super(MenuReport, self).__init__()
+        # create date widget's
+        self.label_start_date = QLabel(self)
+        self.label_start_date.setText('Введіть початкову дату звіту:')
+        self.input_start_date = QDateEdit(self)
+        self.input_start_date.setCalendarPopup(True)
+        self.input_start_date.setDate(datetime.now().replace(day=1))
+
+        self.label_end_date = QLabel(self)
+        self.label_end_date.setText('Введіть завершаючу дату звіту:')
+        self.input_end_date = QDateEdit(self)
+        self.input_end_date.setCalendarPopup(True)
+        self.input_end_date.setDate(datetime.today())
+        # create table widget
+        self.table_widget = QTableWidget() # rows, columns
+        # self.table_widget.setHorizontalHeaderLabels(self.parse_column_names()) # headers of columns on table
+        # self.table_widget.horizontalHeader().setDefaultSectionSize(200)
+        # self.table_widget.setColumnWidth(0, 350)
+        # create button
+        self.push_button = QPushButton('   Сформувати таблицю')
+        self.push_button.setIcon(QtGui.QIcon('icons/computer.png'))
+        self.push_button.clicked.connect(self.show_table_func)
+        self.form_excel = QPushButton('   Формувати у Excel')
+        self.form_excel.setIcon(QtGui.QIcon('icons/excel.png'))
+        self.form_excel.clicked.connect(self.export_to_excel)
+        # create dialog-window for save file
+        self.dialog = QFileDialog(self)
+        # layout box
+        main_layout = QVBoxLayout(self)
+        # 1 row
+        input_form_layout = QHBoxLayout(self)
+        input_form_layout.addWidget(self.label_start_date)
+        input_form_layout.addWidget(self.input_start_date)
+        input_form_layout.addSpacing(200)
+        input_form_layout.addWidget(self.label_end_date)
+        input_form_layout.addWidget(self.input_end_date)
+        # 2 row
+        table_layout = QHBoxLayout(self)
+        table_layout.addWidget(self.table_widget)
+        # 3 row
+        button_layout = QVBoxLayout(self)
+        button_layout.addWidget(self.push_button)
+        button_layout.addWidget(self.form_excel)
+        # main_layout
+        main_layout.addLayout(input_form_layout)
+        main_layout.addWidget(self.table_widget)
+        main_layout.addLayout(button_layout)
+
+    def parse_column_names(self):
+        data_query = select_menu_data((self.input_start_date.text(), self.input_end_date.text()))
+        data_for_column_names = []
+        for i in data_query:
+            name = i[3]
+            if name not in data_for_column_names:
+                data_for_column_names.append(name)
+        #print(data_for_column_names)
+        return data_for_column_names
+
+    def parse_menu_data(self):
+        data_query = select_menu_data((self.input_start_date.text(), self.input_end_date.text()))
+        start_date = data_query[0][7] ######
+        menu_data = []
+        data_for_date = []
+        for i in data_query:
+            data = (i[2], i[3], i[6])
+            if start_date == i[7]: ######
+                data_for_date.append(data)
+            else:
+                inner_list = copy.copy(data_for_date)
+                menu_data.append(inner_list)
+                data_for_date.clear()
+                data_for_date.append(data)
+                start_date = i[7] ###########
+        menu_data.append(data_for_date)
+        return menu_data
+
+    def show_table_func(self):
+        column_names = self.parse_column_names()
+        menu_data = self.parse_menu_data()
+        self.table_widget.setColumnCount(len(column_names)+1)
+        self.table_widget.setHorizontalHeaderLabels(['Дата']+column_names)
+        self.table_widget.setRowCount(len(menu_data)+1)
+        row_table = 0
+        for i in menu_data:
+            column_table = 0
+            date_for_row = i[0][0]
+            self.table_widget.setItem(row_table, 0, QTableWidgetItem(str(date_for_row)))
+            for j in i:
+                self.table_widget.setItem(row_table, column_names.index(j[1])+1, QTableWidgetItem(str(j[2])))
+                column_table += 1
+            row_table += 1
+        # sum
+        sum_columns = ['Всього:']
+
+        for column in range(1, self.table_widget.columnCount()):
+            sum_column = []
+            for row in range(0, self.table_widget.rowCount()):
+                if self.table_widget.item(row, column) is not None:
+                    item = float(self.table_widget.item(row, column).text())
+                else:
+                    item = 0
+                sum_column.append(item)
+            # sum_column = round(sum(sum_column), 3)
+            sum_columns.append(round(sum(sum_column), 3))
+        column = 0
+        for i in sum_columns:
+            self.table_widget.setItem(self.table_widget.rowCount()-1, column, QTableWidgetItem(str(i)))
+            column += 1
+
+
+    def export_to_excel(self):
+        column_headers = []
+        row_count = self.table_widget.model().rowCount()
+        for j in range(self.table_widget.model().columnCount()):
+            column_headers.append(self.table_widget.horizontalHeaderItem(j).text())
+            df = pd.DataFrame(columns=column_headers)
+        for row in range(row_count):
+            for col in range(self.table_widget.columnCount()):
+                try:
+                    temp = self.table_widget.item(row, col).text()
+                except:
+                    temp = 0
+                try:
+                    temp = float(temp)
+                    temp = locale.str(temp)
+                except:
+                    pass
+                df.at[row, column_headers[col]] = temp
+
+        # activate dialog-window for save file
+        result = self.dialog.getSaveFileName(self.table_widget, 'Зберегти файл', 'C:/', 'Excel files (*.xlsx)')
+        # try-except block for saving file
+        try:
+            df.to_excel(result[0])
+        except:
+            pass
+
+
 class MainWindow(QMainWindow):
     """
     MAIN window Class
@@ -430,6 +572,7 @@ class MainWindow(QMainWindow):
         self.main_widget.addTab(Storage(), "Залишки (Склад)")
         self.main_widget.addTab(LossProfitTab(), "Прихід / Розхід")
         self.main_widget.addTab(Menu(), "Розхід на меню-вимогу")
+        self.main_widget.addTab(MenuReport(), "Звіт меню-вимоги")
 
 
 
