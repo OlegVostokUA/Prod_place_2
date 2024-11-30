@@ -20,6 +20,10 @@ first_month_date = datetime.now().replace(day=1).strftime('%d.%m.%Y')
 
 HEADER_LABELS = ['Найменування', 'од. виміру', 'кількість']
 HEADER_LABELS_FOR_MENU = ['Найменування', 'од.виміру', f'наявність на {date}', 'вимагається']
+COLUMNS_BREAD = ['Дата', 'Витрачено \nборошна', 'Отримано \nхліба', 'Вихід \nплановий \n(%)', 'Вихід \nфактичний \n(%)', 'Олія\nза нормою\nв кг', 'Олія\nза нормою\nв %', 'Олія\nфактично\nв кг', 'Олія\nфактично\nв %', 'Сіль\nза нормою\nв кг', 'Сіль\nза нормою\nв %', 'Сіль\nфактично\nв кг', 'Сіль\nфактично\nв %', 'Дріжджі\nза нормою\nв кг', 'Дріжджі\nза нормою\nв %', 'Дріжджі\nфактично\nв кг', 'Дріжджі\nфактично\nв %']
+COLUMNS_BREAD_ACT = ['Найменування \nматеріальних \nзасобів', 'Одиниця \nвиімру', 'Витрачено \nсировини', 'ціна \nза од.', 'Отримано \nпродукції', 'ціна \nза од.']
+ROWS_BREAD_ACT = ['Борошно пшеничне \nІ гат', 'Дріжджі сухі', 'Олія', 'Сіль', 'Хліб пшеничний \nз борошна І гат.', 'ВСЬОГО:']
+
 
 
 class LossProfitTab(QWidget):
@@ -551,6 +555,107 @@ class MenuReport(QWidget):
             pass
 
 
+class Bread(QWidget):
+    def __init__(self, parent=None):
+        super(Bread, self).__init__()
+        self.parent = parent
+        # create input fields
+        self.label_date = QLabel(self)
+        self.label_date.setText('Введіть дату операції:')
+        self.input_date = QDateEdit(self)
+        self.input_date.setCalendarPopup(True)
+        self.input_date.setDate(datetime.today())
+        self.label_bread = QLabel(self)
+        self.label_bread.setText('Введіть кількість продукції:')
+        self.input_bread = QLineEdit('0')
+        self.label_coeff = QLabel(self)
+        self.label_coeff.setText('Введіть коефіцієнт виходу:')
+        self.input_coeff = QLineEdit('136.1')
+        # create tables
+        self.table_widget = QTableWidget(0, 17)  # +1
+        self.table_widget.setHorizontalHeaderLabels(COLUMNS_BREAD)
+        self.table_widget.horizontalHeader().setDefaultSectionSize(80)
+        self.table_widget_2 = QTableWidget(0, 6)  # +1
+        self.table_widget_2.setHorizontalHeaderLabels(COLUMNS_BREAD_ACT)
+        self.table_widget_2.horizontalHeader().setDefaultSectionSize(160)
+        self.table_widget_2.setColumnWidth(0, 300)
+        # create buttons
+        self.form_table_button = QPushButton('   Сформувати таблицю')
+        self.form_table_button.setIcon(QtGui.QIcon('icons/computer.png'))
+        self.form_table_button.clicked.connect(self.show_table_func)
+        self.calculate_button = QPushButton('   Провести розрахунок')
+        self.calculate_button.setIcon(QtGui.QIcon('icons/calculate.png'))
+        #self.calculate_button.clicked.connect(self.calculate_result)
+        self.save_to_db_button = QPushButton('   Зберегти у Базу Даних')
+        self.save_to_db_button.setIcon(QtGui.QIcon('icons/database.png'))
+        #self.save_to_db_button.clicked.connect(self.push_to_database)
+        self.excel_button = QPushButton('   Формувати у Excel')
+        self.excel_button.setIcon(QtGui.QIcon('icons/excel.png'))
+        #self.excel_button.clicked.connect(self.export_to_excel)
+        # create dialog-window for save file
+        self.dialog = QFileDialog(self)
+
+        main_layout = QVBoxLayout(self)
+        # 1 row
+        input_form_layout = QHBoxLayout(self)
+        input_form_layout.addWidget(self.label_date)
+        input_form_layout.addWidget(self.input_date)
+        #
+        input_form_layout.addWidget(self.label_bread)
+        input_form_layout.addWidget(self.input_bread)
+        #
+        input_form_layout.addWidget(self.label_coeff)
+        input_form_layout.addWidget(self.input_coeff)
+
+        button_layout = QHBoxLayout(self)
+        button_layout.addWidget(self.form_table_button)
+        button_layout.addWidget(self.calculate_button)
+        button_layout.addWidget(self.save_to_db_button)
+        button_layout.addWidget(self.excel_button)
+
+        main_layout.addLayout(input_form_layout)
+        main_layout.addWidget(self.table_widget)
+        main_layout.addWidget(self.table_widget_2)
+        main_layout.addLayout(button_layout)
+        # add dialog-window for save file
+        main_layout.addWidget(self.dialog)
+
+    def show_table_func(self):
+        self.table_widget.setRowCount(1)
+        self.table_widget_2.setRowCount(6)
+        date = self.input_date.text()
+        bread = float(self.input_bread.text())
+        out_p = float(self.input_coeff.text())
+        oil_p = 0.141
+        salt_p = 1.8
+        yeast_p = 0.4
+        bread_in_wheat = 0.73475
+        wheat = round(bread * bread_in_wheat, 3)
+        oil = round((wheat * oil_p) / 100, 3)
+        salt = round((wheat * salt_p) / 100, 3)
+        yeast = round((wheat * yeast_p) / 100, 3)
+
+        values_list = [date, wheat, bread, out_p, out_p, oil, oil_p, oil, oil_p, salt, salt_p, salt, salt_p, yeast, yeast_p, yeast, yeast_p]
+
+        names_numb = 0
+        for column in range(17): # for column 1
+            self.table_widget.setItem(0, column, QTableWidgetItem(str(values_list[names_numb])))
+            names_numb = names_numb+1
+
+        row = 0
+        for row_item in ROWS_BREAD_ACT:
+            self.table_widget_2.setItem(row, 0, QTableWidgetItem(str(row_item)))
+            row = row+1
+
+        for row in range(5):
+            self.table_widget_2.setItem(row, 1, QTableWidgetItem('кг'))
+
+        self.table_widget_2.setItem(0, 2, QTableWidgetItem(str(wheat)))
+        self.table_widget_2.setItem(1, 2, QTableWidgetItem(str(yeast)))
+        self.table_widget_2.setItem(2, 2, QTableWidgetItem(str(oil)))
+        self.table_widget_2.setItem(3, 2, QTableWidgetItem(str(salt)))
+        self.table_widget_2.setItem(4, 4, QTableWidgetItem(str(bread)))
+
 class MainWindow(QMainWindow):
     """
     MAIN window Class
@@ -570,6 +675,7 @@ class MainWindow(QMainWindow):
         self.main_widget.addTab(LossProfitTab(), "Прихід / Розхід")
         self.main_widget.addTab(Menu(), "Розхід на меню-вимогу")
         self.main_widget.addTab(MenuReport(), "Звіт меню-вимоги")
+        self.main_widget.addTab(Bread(), "Хлібопечення")
 
 
 
