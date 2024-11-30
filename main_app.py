@@ -471,24 +471,23 @@ class MenuReport(QWidget):
             name = i[3]
             if name not in data_for_column_names:
                 data_for_column_names.append(name)
-        #print(data_for_column_names)
         return data_for_column_names
 
     def parse_menu_data(self):
         data_query = select_menu_data((self.input_start_date.text(), self.input_end_date.text()))
-        start_date = data_query[0][7] ######
+        start_date = data_query[0][7]
         menu_data = []
         data_for_date = []
         for i in data_query:
             data = (i[2], i[3], i[6])
-            if start_date == i[7]: ######
+            if start_date == i[7]:
                 data_for_date.append(data)
             else:
                 inner_list = copy.copy(data_for_date)
                 menu_data.append(inner_list)
                 data_for_date.clear()
                 data_for_date.append(data)
-                start_date = i[7] ###########
+                start_date = i[7]
         menu_data.append(data_for_date)
         return menu_data
 
@@ -518,13 +517,11 @@ class MenuReport(QWidget):
                 else:
                     item = 0
                 sum_column.append(item)
-            # sum_column = round(sum(sum_column), 3)
             sum_columns.append(round(sum(sum_column), 3))
         column = 0
         for i in sum_columns:
             self.table_widget.setItem(self.table_widget.rowCount()-1, column, QTableWidgetItem(str(i)))
             column += 1
-
 
     def export_to_excel(self):
         column_headers = []
