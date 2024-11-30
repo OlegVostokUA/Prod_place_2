@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import *
 from PyQt5 import QtCore, QtGui
 from database_hadlers.database_handlers_main import get_db_connection, \
     insert_product_data, insert_or_update_products, parse_db_all_products, update_products_dec, \
-    insert_prod_menu, select_menu_data
+    insert_prod_menu, select_menu_data, insert_prod_bread
 
 get_db_connection(path_to_db_file='database/prod_database.db')
 locale.setlocale(locale.LC_ALL, "ru_RU")
@@ -22,7 +22,7 @@ HEADER_LABELS = ['Найменування', 'од. виміру', 'кількі
 HEADER_LABELS_FOR_MENU = ['Найменування', 'од.виміру', f'наявність на {date}', 'вимагається']
 COLUMNS_BREAD = ['Дата', 'Витрачено \nборошна', 'Отримано \nхліба', 'Вихід \nплановий \n(%)', 'Вихід \nфактичний \n(%)', 'Олія\nза нормою\nв кг', 'Олія\nза нормою\nв %', 'Олія\nфактично\nв кг', 'Олія\nфактично\nв %', 'Сіль\nза нормою\nв кг', 'Сіль\nза нормою\nв %', 'Сіль\nфактично\nв кг', 'Сіль\nфактично\nв %', 'Дріжджі\nза нормою\nв кг', 'Дріжджі\nза нормою\nв %', 'Дріжджі\nфактично\nв кг', 'Дріжджі\nфактично\nв %']
 COLUMNS_BREAD_ACT = ['Найменування \nматеріальних \nзасобів', 'Одиниця \nвиімру', 'Витрачено \nсировини', 'ціна \nза од.', 'Отримано \nпродукції', 'ціна \nза од.']
-ROWS_BREAD_ACT = ['Борошно пшеничне \nІ гат', 'Дріжджі сухі', 'Олія', 'Сіль', 'Хліб пшеничний \nз борошна І гат.', 'ВСЬОГО:']
+ROWS_BREAD_ACT = ['Борошно пшеничне І гат', 'Дріжджі сухі', 'Олія', 'Сіль', 'Хліб пшеничний з борошна І гат.', 'ВСЬОГО:']
 
 
 
@@ -585,13 +585,13 @@ class Bread(QWidget):
         self.form_table_button.clicked.connect(self.show_table_func)
         self.calculate_button = QPushButton('   Провести розрахунок')
         self.calculate_button.setIcon(QtGui.QIcon('icons/calculate.png'))
-        #self.calculate_button.clicked.connect(self.calculate_result)
+        self.calculate_button.clicked.connect(self.calculate_result)
         self.save_to_db_button = QPushButton('   Зберегти у Базу Даних')
         self.save_to_db_button.setIcon(QtGui.QIcon('icons/database.png'))
-        #self.save_to_db_button.clicked.connect(self.push_to_database)
+        self.save_to_db_button.clicked.connect(self.push_to_database)
         self.excel_button = QPushButton('   Формувати у Excel')
         self.excel_button.setIcon(QtGui.QIcon('icons/excel.png'))
-        #self.excel_button.clicked.connect(self.export_to_excel)
+        self.excel_button.clicked.connect(self.export_to_excel)
         # create dialog-window for save file
         self.dialog = QFileDialog(self)
 
@@ -625,12 +625,11 @@ class Bread(QWidget):
         self.table_widget_2.setRowCount(6)
         date = self.input_date.text()
         bread = float(self.input_bread.text())
-        out_p = float(self.input_coeff.text())
+        out_p = float(self.input_coeff.text()) / 100
         oil_p = 0.141
         salt_p = 1.8
         yeast_p = 0.4
-        bread_in_wheat = 0.73475
-        wheat = round(bread * bread_in_wheat, 3)
+        wheat = round(bread / out_p, 3)
         oil = round((wheat * oil_p) / 100, 3)
         salt = round((wheat * salt_p) / 100, 3)
         yeast = round((wheat * yeast_p) / 100, 3)
@@ -655,6 +654,83 @@ class Bread(QWidget):
         self.table_widget_2.setItem(2, 2, QTableWidgetItem(str(oil)))
         self.table_widget_2.setItem(3, 2, QTableWidgetItem(str(salt)))
         self.table_widget_2.setItem(4, 4, QTableWidgetItem(str(bread)))
+
+    def calculate_result(self):
+        sum_ingredients = []
+        for row in range(5):
+            try:
+                item = round(float(self.table_widget_2.item(row, 2).text()), 3)
+            except:
+                item = 0.0
+            try:
+                item_price = round(float(self.table_widget_2.item(row, 3).text()), 2)
+            except:
+                item_price = 0.0
+            item_sum = round(item * item_price, 2)
+            sum_ingredients.append(item_sum)
+        sum_ingredients = round(sum(sum_ingredients), 2)
+        self.table_widget_2.setItem(5, 3, QTableWidgetItem(str(sum_ingredients)))
+        self.table_widget_2.setItem(5, 5, QTableWidgetItem(str(sum_ingredients)))
+        try:
+            bread_price = round(sum_ingredients / round(float(self.table_widget_2.item(4, 4).text()), 3), 2)
+        except:
+            bread_price = 0
+        self.table_widget_2.setItem(4, 5, QTableWidgetItem(str(bread_price)))
+
+    def push_to_database(self):
+        date_op = [self.input_date.text()]
+        bread = [self.input_bread.text()]
+        sum_bread = [self.table_widget_2.item(5, 5).text()]
+        data_for_all_prod = []
+        for row in range(self.table_widget_2.model().rowCount()):
+            tuple_for_all_prod = []
+            for column in range(self.table_widget_2.model().columnCount()):
+                if self.table_widget_2.item(row, column) is not None:
+                    item = self.table_widget_2.item(row, column).text()
+                else:
+                    item = 0
+                if item == '':
+                    item = 0
+                tuple_for_all_prod.append(item)
+            tuple_for_all_prod = date_op + tuple_for_all_prod
+            data_for_all_prod.append(tuple_for_all_prod)
+        ingredients = []
+        for i in data_for_all_prod[:4]:
+            i[0], i[1] = i[1], i[0]
+            update_products_dec(i)
+            ingredients.append(i[3])
+        bread = date_op + bread + ingredients + sum_bread
+        insert_prod_bread(bread)
+        bread_for_all_products = [self.table_widget_2.item(4, 0).text()] + [self.table_widget_2.item(4, 1).text()] + [self.table_widget_2.item(4, 4).text()] + ['Прибуток']
+        insert_or_update_products(bread_for_all_products)
+
+    def export_to_excel(self):
+        column_headers = []
+        row_count = self.table_widget_2.model().rowCount()
+        for j in range(self.table_widget_2.model().columnCount()):
+            column_headers.append(self.table_widget_2.horizontalHeaderItem(j).text())
+            df = pd.DataFrame(columns=column_headers)
+        for row in range(row_count):
+            for col in range(self.table_widget_2.columnCount()):
+                try:
+                    temp = self.table_widget_2.item(row, col).text()
+                except:
+                    temp = 0
+                try:
+                    temp = float(temp)
+                    temp = locale.str(temp)
+                except:
+                    pass
+                df.at[row, column_headers[col]] = temp
+
+        # activate dialog-window for save file
+        result = self.dialog.getSaveFileName(self.table_widget_2, 'Зберегти файл', 'C:/', 'Excel files (*.xlsx)')
+        # try-except block for saving file
+        try:
+            df.to_excel(result[0])
+        except:
+            pass
+
 
 class MainWindow(QMainWindow):
     """

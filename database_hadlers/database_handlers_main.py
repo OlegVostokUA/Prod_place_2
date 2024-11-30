@@ -49,10 +49,26 @@ def get_db_connection(path_to_db_file=None):
                                                                     quantity_storage REAL,
                                                                     quantity_for_menu REAL,
                                                                     date_time_op TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)"""
-
+    cr_table_products_for_bread = """CREATE TABLE IF NOT EXISTS prod_bread(id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                                                    date_operation DATE,                   
+                                                                    name_product TEXT,
+                                                                    unit TEXT,
+                                                                    quantity_for_bread REAL,
+                                                                    date_time_op TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)"""
+    cr_table_bread = """CREATE TABLE IF NOT EXISTS bread(id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                                                    date_operation DATE,                   
+                                                                    bread REAL,
+                                                                    wheat REAL,
+                                                                    yeast REAL,
+                                                                    oil REAL,
+                                                                    salt REAL,
+                                                                    sum_bread REAL,
+                                                                    date_time_op TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)"""
     cursor.execute(cr_table_product_query)
     cursor.execute(cr_table_products_query)
     cursor.execute(cr_table_products_for_menu)
+    #cursor.execute(cr_table_products_for_bread)
+    cursor.execute(cr_table_bread)
 
     sql_conn.commit()
 
@@ -113,6 +129,11 @@ def update_products_dec(data):
 
 def insert_prod_menu(data):
     cursor.executemany("""INSERT INTO prod_menu(date_operation, date_menu, name_product, unit, quantity_storage, quantity_for_menu) VALUES (?,?,?,?,?,?)""", data)
+    sql_conn.commit()
+
+
+def insert_prod_bread(data):
+    cursor.execute("""INSERT INTO bread(date_operation, bread, wheat, yeast, oil, salt, sum_bread) VALUES (?,?,?,?,?,?,?)""", data)
     sql_conn.commit()
 
 
