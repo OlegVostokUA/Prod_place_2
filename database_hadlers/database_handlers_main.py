@@ -151,12 +151,17 @@ def select_menu_data(dates):
     date_1 = f'{dates[0][6:]}-{dates[0][3:5]}-{dates[0][0:2]}'
     date_2 = f'{dates[1][6:]}-{dates[1][3:5]}-{dates[1][0:2]}'
     dates = date_1, date_2
-    # dates - tuple with two dates, Example: ('24.11.2024', '25.11.2024')
-    # dates get from two fields GUI
-    cursor.execute("""SELECT * FROM prod_menu WHERE date_time_op BETWEEN ? AND ?""", dates) # date_menu
+    cursor.execute("""SELECT * FROM prod_menu WHERE date_time_op BETWEEN ? AND ?""", dates)
     data_menu_select = cursor.fetchall()
     return data_menu_select
 
 
+def select_bread_data(dates):
+    date_1 = f'{dates[0][6:]}-{dates[0][3:5]}-{dates[0][0:2]}'
+    date_2 = f'{dates[1][6:]}-{dates[1][3:5]}-{dates[1][0:2]}'
+    dates = date_1, date_2
+    cursor.execute("""SELECT * FROM bread WHERE date_time_op BETWEEN ? AND ?""", dates)
+    data_menu_select = cursor.fetchall()
+    return data_menu_select
 
 # select_()

@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import *
 from PyQt5 import QtCore, QtGui
 from database_hadlers.database_handlers_main import get_db_connection, \
     insert_product_data, insert_or_update_products, parse_db_all_products, update_products_dec, \
-    insert_prod_menu, select_menu_data, insert_prod_bread
+    insert_prod_menu, select_menu_data, insert_prod_bread, select_bread_data
 
 get_db_connection(path_to_db_file='database/prod_database.db')
 locale.setlocale(locale.LC_ALL, "ru_RU")
@@ -23,7 +23,7 @@ HEADER_LABELS_FOR_MENU = ['Найменування', 'од.виміру', f'н�
 COLUMNS_BREAD = ['Дата', 'Витрачено \nборошна', 'Отримано \nхліба', 'Вихід \nплановий \n(%)', 'Вихід \nфактичний \n(%)', 'Олія\nза нормою\nв кг', 'Олія\nза нормою\nв %', 'Олія\nфактично\nв кг', 'Олія\nфактично\nв %', 'Сіль\nза нормою\nв кг', 'Сіль\nза нормою\nв %', 'Сіль\nфактично\nв кг', 'Сіль\nфактично\nв %', 'Дріжджі\nза нормою\nв кг', 'Дріжджі\nза нормою\nв %', 'Дріжджі\nфактично\nв кг', 'Дріжджі\nфактично\nв %']
 COLUMNS_BREAD_ACT = ['Найменування \nматеріальних \nзасобів', 'Одиниця \nвиімру', 'Витрачено \nсировини', 'ціна \nза од.', 'Отримано \nпродукції', 'ціна \nза од.']
 ROWS_BREAD_ACT = ['Борошно пшеничне І гат', 'Дріжджі сухі', 'Олія', 'Сіль', 'Хліб пшеничний з борошна І гат.', 'ВСЬОГО:']
-
+COLUMNS_BREAD_ZVIT = ['Дата', 'Витрачено \nборошна', 'Отримано \nхліба', 'Олія\nв кг', 'Сіль\nв кг', 'Дріжджі\nв кг', 'Сума']
 
 
 class LossProfitTab(QWidget):
@@ -265,9 +265,6 @@ class Storage(QWidget):
                 column_table += 1
             row_table += 1
 
-    def push_to_database(self):
-        pass
-
     def export_to_excel(self):
         column_headers = []
         row_count = self.table_widget.model().rowCount()
@@ -306,7 +303,6 @@ class Menu(QWidget):
         self.input_op_date = QDateEdit(self)
         self.input_op_date.setCalendarPopup(True)
         self.input_op_date.setDate(datetime.today())
-
         self.label_menu_date = QLabel(self)
         self.label_menu_date.setText('Введіть дату на яку здійснюється операція:')
         self.input_menu_date = QDateEdit(self)
@@ -387,7 +383,7 @@ class Menu(QWidget):
             data_for_menu_prod.append(tuple_for_all_prod)
         for i in data_for_all_prod:
             update_products_dec(list(i))
-        insert_prod_menu(data_for_menu_prod) # create new table in db for menu data
+        insert_prod_menu(data_for_menu_prod)
 
     def export_to_excel(self):
         column_headers = []
@@ -434,10 +430,7 @@ class MenuReport(QWidget):
         self.input_end_date.setCalendarPopup(True)
         self.input_end_date.setDate(datetime.today())
         # create table widget
-        self.table_widget = QTableWidget() # rows, columns
-        # self.table_widget.setHorizontalHeaderLabels(self.parse_column_names()) # headers of columns on table
-        # self.table_widget.horizontalHeader().setDefaultSectionSize(200)
-        # self.table_widget.setColumnWidth(0, 350)
+        self.table_widget = QTableWidget()
         # create button
         self.push_button = QPushButton('   Сформувати таблицю')
         self.push_button.setIcon(QtGui.QIcon('icons/computer.png'))
@@ -510,7 +503,6 @@ class MenuReport(QWidget):
                 self.table_widget.setItem(row_table, column_names.index(j[1])+1, QTableWidgetItem(str(j[2])))
                 column_table += 1
             row_table += 1
-        # sum
         sum_columns = ['Всього:']
 
         for column in range(1, self.table_widget.columnCount()):
@@ -600,19 +592,15 @@ class Bread(QWidget):
         input_form_layout = QHBoxLayout(self)
         input_form_layout.addWidget(self.label_date)
         input_form_layout.addWidget(self.input_date)
-        #
         input_form_layout.addWidget(self.label_bread)
         input_form_layout.addWidget(self.input_bread)
-        #
         input_form_layout.addWidget(self.label_coeff)
         input_form_layout.addWidget(self.input_coeff)
-
         button_layout = QHBoxLayout(self)
         button_layout.addWidget(self.form_table_button)
         button_layout.addWidget(self.calculate_button)
         button_layout.addWidget(self.save_to_db_button)
         button_layout.addWidget(self.excel_button)
-
         main_layout.addLayout(input_form_layout)
         main_layout.addWidget(self.table_widget)
         main_layout.addWidget(self.table_widget_2)
@@ -637,7 +625,7 @@ class Bread(QWidget):
         values_list = [date, wheat, bread, out_p, out_p, oil, oil_p, oil, oil_p, salt, salt_p, salt, salt_p, yeast, yeast_p, yeast, yeast_p]
 
         names_numb = 0
-        for column in range(17): # for column 1
+        for column in range(17):
             self.table_widget.setItem(0, column, QTableWidgetItem(str(values_list[names_numb])))
             names_numb = names_numb+1
 
@@ -732,6 +720,59 @@ class Bread(QWidget):
             pass
 
 
+class BreadZvit(QWidget):
+    def __init__(self, parent=None):
+        super(BreadZvit, self).__init__()
+        self.parent = parent
+        # create table
+        self.table_widget = QTableWidget(0, 7)
+        self.table_widget.setHorizontalHeaderLabels(COLUMNS_BREAD_ZVIT)
+        # create input date labels
+        self.label_date_1 = QLabel(self)
+        self.label_date_1.setText('Введіть початкову дату операції:')
+        self.input_date_1 = QDateEdit(self)
+        self.input_date_1.setCalendarPopup(True)
+        self.input_date_1.setDate(datetime.now().replace(day=1))
+        self.label_date_2 = QLabel(self)
+        self.label_date_2.setText('Введіть кіневу дату операції:')
+        self.input_date_2 = QDateEdit(self)
+        self.input_date_2.setCalendarPopup(True)
+        self.input_date_2.setDate(datetime.today())
+        # create buttons
+        self.form_table_button = QPushButton('   Сформувати таблицю')
+        self.form_table_button.setIcon(QtGui.QIcon('icons/computer.png'))
+        self.form_table_button.clicked.connect(self.show_table_func)
+        self.excel_button = QPushButton('   Формувати у Excel')
+        self.excel_button.setIcon(QtGui.QIcon('icons/excel.png'))
+        self.excel_button.clicked.connect(self.export_to_excel)
+        # create dialog-window for save file
+        self.dialog = QFileDialog(self)
+
+        main_layout = QVBoxLayout(self)
+        input_form_layout = QHBoxLayout(self)
+        input_form_layout.addWidget(self.label_date_1)
+        input_form_layout.addWidget(self.input_date_1)
+        input_form_layout.addWidget(self.label_date_2)
+        input_form_layout.addWidget(self.input_date_2)
+        button_layout = QHBoxLayout(self)
+        button_layout.addWidget(self.form_table_button)
+        button_layout.addWidget(self.excel_button)
+        main_layout.addLayout(input_form_layout)
+        main_layout.addWidget(self.table_widget)
+        main_layout.addLayout(button_layout)
+        # add dialog-window for save file
+        main_layout.addWidget(self.dialog)
+
+    def show_table_func(self):
+        dates = self.input_date_1.text(), self.input_date_2.text()
+        data = select_bread_data(dates)
+        print(data)
+
+    def export_to_excel(self):
+        pass
+
+
+
 class MainWindow(QMainWindow):
     """
     MAIN window Class
@@ -752,6 +793,7 @@ class MainWindow(QMainWindow):
         self.main_widget.addTab(Menu(), "Розхід на меню-вимогу")
         self.main_widget.addTab(MenuReport(), "Звіт меню-вимоги")
         self.main_widget.addTab(Bread(), "Хлібопечення")
+        self.main_widget.addTab(BreadZvit(), "Хлібопечення звіт")
 
 
 
