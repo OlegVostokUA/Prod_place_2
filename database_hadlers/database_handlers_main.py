@@ -67,7 +67,7 @@ def get_db_connection(path_to_db_file=None):
     cursor.execute(cr_table_product_query)
     cursor.execute(cr_table_products_query)
     cursor.execute(cr_table_products_for_menu)
-    #cursor.execute(cr_table_products_for_bread)
+    # cursor.execute(cr_table_products_for_bread)
     cursor.execute(cr_table_bread)
 
     sql_conn.commit()

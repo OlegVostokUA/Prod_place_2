@@ -1,8 +1,11 @@
 # pip install pyinstaller
 # pyinstaller -F -w -i "C:\Users\User\PycharmProjects\ProdPlace\MainApp\main.ico" MainApp.py
 import copy
+import os
 import sys
 from datetime import datetime
+
+import openpyxl
 import pandas as pd
 import locale
 
@@ -686,6 +689,7 @@ class Bread(QWidget):
         for i in data_for_all_prod[:4]:
             i[0], i[1] = i[1], i[0]
             update_products_dec(i)
+            i[3] = abs(float(i[3]))
             ingredients.append(i[3])
         bread = date_op + bread + ingredients + sum_bread
         insert_prod_bread(bread)
@@ -766,11 +770,185 @@ class BreadZvit(QWidget):
     def show_table_func(self):
         dates = self.input_date_1.text(), self.input_date_2.text()
         data = select_bread_data(dates)
-        print(data)
+        self.table_widget.setRowCount(len(data) + 1)
+        row_table = 0
+        for i in data:
+            column_table = 0
+            for j in i[1:]:
+                self.table_widget.setItem(row_table, column_table, QTableWidgetItem(str(j)))
+                column_table += 1
+            row_table += 1
+        sum_columns = ['Всього:']
+        for column in range(1, self.table_widget.columnCount()):
+            sum_column = []
+            for row in range(0, self.table_widget.rowCount()):
+                if self.table_widget.item(row, column) is not None:
+                    item = float(self.table_widget.item(row, column).text())
+                else:
+                    item = 0
+                sum_column.append(item)
+            sum_columns.append(round(sum(sum_column), 3))
+        column = 0
+        for i in sum_columns:
+            self.table_widget.setItem(self.table_widget.rowCount()-1, column, QTableWidgetItem(str(i)))
+            column += 1
 
     def export_to_excel(self):
-        pass
+        column_headers = []
+        row_count = self.table_widget.model().rowCount()
+        for j in range(self.table_widget.model().columnCount()):
+            column_headers.append(self.table_widget.horizontalHeaderItem(j).text())
+            df = pd.DataFrame(columns=column_headers)
+        for row in range(row_count):
+            for col in range(self.table_widget.columnCount()):
+                try:
+                    temp = self.table_widget.item(row, col).text()
+                except:
+                    temp = 0
+                try:
+                    temp = float(temp)
+                    temp = locale.str(temp)
+                except:
+                    pass
+                df.at[row, column_headers[col]] = temp
+        # activate dialog-window for save file
+        result = self.dialog.getSaveFileName(self.table_widget, 'Зберегти файл', 'C:/', 'Excel files (*.xlsx)')
+        # try-except block for saving file
+        try:
+            df.to_excel(result[0])
+        except:
+            pass
 
+
+class ReadWriteExcel(QWidget):
+    def __init__(self, parent=None):
+        self.parent = parent
+        super(ReadWriteExcel, self).__init__()
+        self.make_file = QPushButton('   Почати заповнення "Залишки підрозділи"')
+        self.make_file.setIcon(QtGui.QIcon('img/process.png'))
+        self.make_file.clicked.connect(self.scrap_write)
+        self.make_file_2 = QPushButton('   Почати заповнення "Залишки ООДК"')
+        self.make_file_2.setIcon(QtGui.QIcon('img/process.png'))
+        self.make_file_2.clicked.connect(self.scrap_write_2)
+        main_v_box = QVBoxLayout(self)
+        main_v_box.addWidget(self.make_file)
+        main_v_box.addWidget(self.make_file_2)
+
+    def get_dir_path(self):
+        self.files_directory_choice = QFileDialog.getExistingDirectory(self, 'Оберіть папку з вихідними файлами')
+        return self.files_directory_choice
+
+    def get_file_path(self):
+        self.file_main = QFileDialog.getOpenFileName(self, 'Оберіть базовий файл')
+        return self.file_main[0]
+
+    def scrap_write(self):
+        f_dir = self.get_dir_path()
+        m_file = self.get_file_path()
+        files = os.listdir(f_dir)
+        val_massive = []
+        for file in files:
+            read_data = openpyxl.load_workbook(f_dir+'/'+file)
+            sheet_1 = read_data.sheetnames[0]
+            sheet = read_data[sheet_1]
+            columns = [2, 3, 4, 5, 10, 12]
+            for coll in columns:
+                mark = sheet.cell(column=coll, row=6).value
+                if mark == None:
+                    break
+                val_list = []
+                count = 0
+                for row in range(6, 119):
+                    val = sheet.cell(column=coll, row=row).value
+                    if val == None:
+                        val = 0
+                    if type(val) == float or type(val) == int:
+                        if count > 22:
+                            if val == 0:
+                                val = '0,000'
+                            else:
+                                val = round((val / 1000), 3)
+                                val = locale.str(val)
+                    count += 1
+                    val_list.append(val)
+                val_massive.append(val_list)
+        open_file = openpyxl.load_workbook(m_file)
+        sheet_main_1 = open_file.sheetnames[0]
+        sheet_main = open_file[sheet_main_1]
+        columns_main = [x for x in range(4, (len(val_massive)+2)*2) if x % 2 == 0]
+        col_index = 0
+        for val_l in val_massive:
+            column_numb = columns_main[col_index]
+            row = 6
+            for val in val_l:
+                sheet_main.cell(column=column_numb, row=row).value = val
+                row += 1
+            col_index += 1
+        new_filename = m_file.split('.')
+        new_filename.insert(1, date)
+        new_filename[2] = '.xlsx'
+        new_filename = ' '.join(new_filename)
+        open_file.save(new_filename)
+
+    # for button #2 functions
+    def get_src_file_path(self):
+        self.files_directory_choice = QFileDialog.getOpenFileName(self, 'Оберіть вихідний файл')
+        return self.files_directory_choice[0]
+
+    def scrap_write_2(self):
+        src_file = self.get_src_file_path()
+        base_file = self.get_file_path()
+        read_data_src_file = openpyxl.load_workbook(src_file)
+        sheet_1_src_file = read_data_src_file.sheetnames[0]
+        sheet_src_file = read_data_src_file[sheet_1_src_file]
+        dict_source_1 = {}
+        dict_source_2 = {}
+        for row in range(7, 119):
+            key = sheet_src_file.cell(column=1, row=row).value
+            val_1 = sheet_src_file.cell(column=32, row=row).value
+            val_2 = sheet_src_file.cell(column=33, row=row).value
+            dict_source_1[key] = val_1
+            dict_source_2[key] = val_2
+        read_data_base_file = openpyxl.load_workbook(base_file)
+        sheet_1_base_file = read_data_base_file.sheetnames[0]
+        sheet_base_file = read_data_base_file[sheet_1_base_file]
+        ### 1
+        for item in dict_source_1.items():
+            name, value = item[0], item[1]
+            prev_key = None
+            for i in range(6, 117):
+                key = sheet_base_file.cell(column=1, row=i).value
+                if key == None:
+                    key = prev_key
+                else:
+                    prev_key = key
+                if key in ['Капуста', 'Морква', 'Буряк', 'Цибуля', 'Часник', 'Огірки, помідори, баклажани']:
+                    key = key + ' ' + sheet_base_file.cell(column=2, row=i).value
+                if key.lower() == name.lower():
+                    row = sheet_base_file.cell(column=1, row=i).row
+                    sheet_base_file.cell(column=3, row=row).value = value
+                    break
+        ### 2
+        for item in dict_source_2.items():
+            name, value = item[0], item[1]
+            prev_key = None
+            for i in range(6, 117):
+                key = sheet_base_file.cell(column=1, row=i).value
+                if key == None:
+                    key = prev_key
+                else:
+                    prev_key = key
+                if key in ['Капуста', 'Морква', 'Буряк', 'Цибуля', 'Часник', 'Огірки, помідори, баклажани']:
+                    key = key + ' ' + sheet_base_file.cell(column=2, row=i).value
+                if key.lower() == name.lower():
+                    row = sheet_base_file.cell(column=1, row=i).row
+                    sheet_base_file.cell(column=5, row=row).value = value
+                    break
+        new_filename = base_file.split('.')
+        new_filename.insert(1, date)
+        new_filename[2] = '.xlsx'
+        new_filename = ' '.join(new_filename)
+        read_data_base_file.save(new_filename)
 
 
 class MainWindow(QMainWindow):
@@ -794,8 +972,7 @@ class MainWindow(QMainWindow):
         self.main_widget.addTab(MenuReport(), "Звіт меню-вимоги")
         self.main_widget.addTab(Bread(), "Хлібопечення")
         self.main_widget.addTab(BreadZvit(), "Хлібопечення звіт")
-
-
+        self.main_widget.addTab(ReadWriteExcel(), "Парсер Excel")
 
 
 ### Final App Block ###
